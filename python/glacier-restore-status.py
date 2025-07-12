@@ -1,3 +1,5 @@
+"""Check the restore status of S3 objects stored in Glacier."""
+
 import boto3
 import logging
 import argparse
@@ -5,6 +7,13 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def parse_args():
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(description="Check S3 Glacier restore status for objects by prefix.")
     parser.add_argument('--bucket', required=True, help='S3 bucket name')
     parser.add_argument('--prefix', required=True, help='S3 prefix (folder)')
@@ -13,6 +22,22 @@ def parse_args():
     return parser.parse_args()
 
 def check_restore_status(s3, bucket, key):
+    """Return the restore status for a single object.
+
+    Parameters
+    ----------
+    s3 : boto3.Client
+        Initialized S3 client.
+    bucket : str
+        Name of the S3 bucket.
+    key : str
+        Object key to check.
+
+    Returns
+    -------
+    tuple
+        Tuple of ``(key, status, restored_bytes)``.
+    """
     try:
         obj = s3.head_object(Bucket=bucket, Key=key)
         restore_field = obj.get('Restore')
@@ -28,6 +53,18 @@ def check_restore_status(s3, bucket, key):
         return key, 'Error', 0
 
 def summarize_restore_status(args):
+    """Summarize restore status for all objects under a prefix.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments from :func:`parse_args`.
+
+    Returns
+    -------
+    None
+        Prints a summary to stdout and logs details.
+    """
     s3 = boto3.client('s3')
     paginator = s3.get_paginator('list_objects_v2')
     pages = paginator.paginate(Bucket=args.bucket, Prefix=args.prefix)

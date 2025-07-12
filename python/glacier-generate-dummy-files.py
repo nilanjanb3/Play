@@ -1,3 +1,5 @@
+"""Generate dummy files and upload them to S3 using Glacier storage class."""
+
 import os
 import boto3
 import random
@@ -25,6 +27,13 @@ print(f"✅ Generated {NUM_FILES} dummy files in {LOCAL_DIR}")
 s3 = boto3.client('s3')
 
 def upload_file(filepath):
+    """Upload a file to S3 using the Glacier storage class.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the file that will be uploaded.
+    """
     filename = os.path.basename(filepath)
     s3_key = f"{PREFIX}{filename}"
     try:
