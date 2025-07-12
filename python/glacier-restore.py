@@ -1,3 +1,5 @@
+"""Restore S3 objects stored in Glacier and summarize the operation."""
+
 import boto3
 import logging
 import argparse
@@ -7,6 +9,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import Counter
 
 def parse_args():
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(description="Restore S3 Glacier objects by prefix and show detailed status.")
     parser.add_argument('--bucket', required=True, help='S3 bucket name')
     parser.add_argument('--prefix', required=True, help='S3 prefix (folder)')
@@ -17,6 +26,26 @@ def parse_args():
     return parser.parse_args()
 
 def check_and_restore_object(s3, bucket, key, days, tier):
+    """Check an object's restore status and initiate a restore if needed.
+
+    Parameters
+    ----------
+    s3 : boto3.Client
+        Initialized S3 client.
+    bucket : str
+        Name of the S3 bucket.
+    key : str
+        Object key within the bucket.
+    days : int
+        Number of days the restored object remains available.
+    tier : str
+        Restore tier to use when requesting the restore.
+
+    Returns
+    -------
+    tuple
+        A tuple of ``(key, status, tier_used)`` indicating the restore result.
+    """
     # Step 1: Check current restore status
     try:
         obj = s3.head_object(Bucket=bucket, Key=key)
@@ -81,6 +110,22 @@ def check_and_restore_object(s3, bucket, key, days, tier):
             return key, 'Failed', tier
 
 def list_glacier_objects(s3, bucket, prefix):
+    """List Glacier objects under a prefix.
+
+    Parameters
+    ----------
+    s3 : boto3.Client
+        Initialized S3 client.
+    bucket : str
+        Name of the S3 bucket.
+    prefix : str
+        Prefix to search under.
+
+    Returns
+    -------
+    list of tuple
+        A list of ``(key, size)`` tuples for Glacier objects.
+    """
     paginator = s3.get_paginator('list_objects_v2')
     pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
     objects = []
@@ -96,6 +141,7 @@ def list_glacier_objects(s3, bucket, prefix):
     return objects
 
 def main():
+    """Entry point for the restore workflow."""
     args = parse_args()
     logging.basicConfig(
         level=logging.INFO,
